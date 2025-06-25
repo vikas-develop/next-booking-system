@@ -2,12 +2,24 @@ import { NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
 import Staff from '@/models/Staff';
 
-// GET /api/staff - Get all staff members
-export async function GET() {
+// GET /api/staff - Get all staff members (with business filter support)
+export async function GET(request) {
   try {
     await connectDB();
-    const staff = await Staff.find({ isActive: true }).sort({ name: 1 });
-    return NextResponse.json({ success: true, data: staff });
+    
+    const { searchParams } = new URL(request.url);
+    const businessId = searchParams.get('business');
+    
+    let query = { isActive: true };
+    if (businessId) {
+      query.business = businessId;
+    }
+    
+    const staff = await Staff.find(query)
+      .populate('business', 'name slug')
+      .sort({ name: 1 });
+    
+    return NextResponse.json(staff);
   } catch (error) {
     console.error('Error fetching staff:', error);
     return NextResponse.json(

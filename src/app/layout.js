@@ -42,6 +42,9 @@ export default function RootLayout({ children }) {
                   <a href="/staff" className="text-gray-500 hover:text-purple-600 px-3 py-2 rounded-md text-sm font-medium">
                     Our Team
                   </a>
+                  <a href="/demo" className="text-gray-500 hover:text-purple-600 px-3 py-2 rounded-md text-sm font-medium">
+                    Widget Demo
+                  </a>
                   <a href="/admin" className="text-gray-500 hover:text-purple-600 px-3 py-2 rounded-md text-sm font-medium">
                     Admin
                   </a>

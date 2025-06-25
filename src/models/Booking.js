@@ -1,6 +1,19 @@
 import mongoose from 'mongoose';
 
 const BookingSchema = new mongoose.Schema({
+  // Multi-tenant support
+  business: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Business',
+    required: [true, 'Business is required'],
+  },
+  
+  // Booking reference ID for customer
+  bookingReference: {
+    type: String,
+    unique: true,
+  },
+  
   customer: {
     firstName: {
       type: String,
@@ -53,6 +66,11 @@ const BookingSchema = new mongoose.Schema({
     trim: true,
     default: '',
   },
+  specialRequests: {
+    type: String,
+    trim: true,
+    default: '',
+  },
   totalPrice: {
     type: Number,
     required: [true, 'Total price is required'],
@@ -74,18 +92,44 @@ const BookingSchema = new mongoose.Schema({
   },
   createdBy: {
     type: String,
-    enum: ['customer', 'admin'],
-    default: 'customer',
+    enum: ['customer', 'widget', 'admin'],
+    default: 'widget',
+  },
+  // Widget source information
+  source: {
+    widget: { type: Boolean, default: true },
+    referrer: String, // The website that embedded the widget
+    userAgent: String,
+    ipAddress: String,
+  },
+  // Confirmation details
+  confirmation: {
+    sent: { type: Boolean, default: false },
+    sentAt: Date,
+    method: { type: String, enum: ['email', 'sms', 'both'], default: 'email' },
   },
 }, {
   timestamps: true,
 });
 
+// Generate booking reference before saving
+BookingSchema.pre('save', function(next) {
+  if (!this.bookingReference) {
+    // Generate a unique booking reference (e.g., BK-20241205-ABC123)
+    const date = new Date().toISOString().split('T')[0].replace(/-/g, '');
+    const random = Math.random().toString(36).substr(2, 6).toUpperCase();
+    this.bookingReference = `BK-${date}-${random}`;
+  }
+  next();
+});
+
 // Index for efficient queries
-BookingSchema.index({ appointmentDate: 1, appointmentTime: 1 });
-BookingSchema.index({ 'customer.email': 1 });
-BookingSchema.index({ staff: 1, appointmentDate: 1 });
-BookingSchema.index({ status: 1 });
+BookingSchema.index({ business: 1, appointmentDate: 1 });
+BookingSchema.index({ business: 1, appointmentDate: 1, appointmentTime: 1 });
+BookingSchema.index({ business: 1, 'customer.email': 1 });
+BookingSchema.index({ business: 1, staff: 1, appointmentDate: 1 });
+BookingSchema.index({ business: 1, status: 1 });
+BookingSchema.index({ bookingReference: 1 });
 
 // Virtual for full customer name
 BookingSchema.virtual('customer.fullName').get(function() {
@@ -97,6 +141,7 @@ BookingSchema.pre('save', async function(next) {
   if (this.isNew || this.isModified('appointmentDate') || this.isModified('appointmentTime') || this.isModified('staff')) {
     const conflictingBooking = await this.constructor.findOne({
       _id: { $ne: this._id },
+      business: this.business,
       staff: this.staff,
       appointmentDate: this.appointmentDate,
       appointmentTime: this.appointmentTime,

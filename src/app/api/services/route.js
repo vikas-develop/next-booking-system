@@ -2,12 +2,24 @@ import { NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
 import Service from '@/models/Service';
 
-// GET /api/services - Get all services
-export async function GET() {
+// GET /api/services - Get all services (with business filter support)
+export async function GET(request) {
   try {
     await connectDB();
-    const services = await Service.find({ isActive: true }).sort({ category: 1, name: 1 });
-    return NextResponse.json({ success: true, data: services });
+    
+    const { searchParams } = new URL(request.url);
+    const businessId = searchParams.get('business');
+    
+    let query = { isActive: true };
+    if (businessId) {
+      query.business = businessId;
+    }
+    
+    const services = await Service.find(query)
+      .populate('business', 'name slug')
+      .sort({ category: 1, name: 1 });
+    
+    return NextResponse.json(services);
   } catch (error) {
     console.error('Error fetching services:', error);
     return NextResponse.json(
