@@ -1,30 +1,45 @@
+'use client';
+
 import Image from "next/image";
 import { Scissors, Calendar, Users, Star } from "lucide-react";
+import { useServices } from '@/hooks/useApi';
 
 export default function Home() {
-  const services = [
-    {
-      name: "Haircut & Styling",
-      description: "Professional cuts and styling for all hair types",
-      price: "Starting at $45",
-      duration: "45 min",
-      icon: <Scissors className="w-8 h-8 text-purple-600" />
-    },
-    {
-      name: "Hair Coloring",
-      description: "Expert color treatments and highlights",
-      price: "Starting at $85",
-      duration: "2-3 hours",
-      icon: <Star className="w-8 h-8 text-purple-600" />
-    },
-    {
-      name: "Hair Treatment",
-      description: "Deep conditioning and repair treatments",
-      price: "Starting at $65",
-      duration: "1 hour",
-      icon: <Users className="w-8 h-8 text-purple-600" />
+  const { data: services, loading: servicesLoading } = useServices();
+
+  const formatPrice = (price) => {
+    if (!price) return 'Contact for pricing';
+    if (price.min === price.max) {
+      return `$${price.min}`;
     }
-  ];
+    return `Starting at $${price.min}`;
+  };
+
+  const formatDuration = (minutes) => {
+    if (!minutes) return 'Duration varies';
+    if (minutes < 60) {
+      return `${minutes} min`;
+    }
+    const hours = Math.floor(minutes / 60);
+    const remainingMinutes = minutes % 60;
+    if (remainingMinutes === 0) {
+      return `${hours} hour${hours > 1 ? 's' : ''}`;
+    }
+    return `${hours}h ${remainingMinutes}min`;
+  };
+
+  const getServiceIcon = (category) => {
+    switch (category) {
+      case 'Hair Services':
+        return <Scissors className="w-8 h-8 text-purple-600" />;
+      case 'Hair Coloring':
+        return <Star className="w-8 h-8 text-purple-600" />;
+      case 'Hair Treatments':
+        return <Users className="w-8 h-8 text-purple-600" />;
+      default:
+        return <Scissors className="w-8 h-8 text-purple-600" />;
+    }
+  };
 
   const features = [
     {
@@ -40,6 +55,9 @@ export default function Home() {
       description: "Relax in our modern, comfortable salon designed for your ultimate comfort and enjoyment."
     }
   ];
+
+  // Get first 3 services for preview, or fallback services if API is loading
+  const previewServices = services?.slice(0, 3) || [];
 
   return (
     <div className="bg-white">
@@ -83,21 +101,39 @@ export default function Home() {
             </p>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {services.map((service, index) => (
-              <div key={index} className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
-                <div className="flex items-center mb-4">
-                  {service.icon}
-                  <h3 className="text-xl font-semibold ml-3">{service.name}</h3>
+          {servicesLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              {[...Array(3)].map((_, index) => (
+                <div key={index} className="bg-white rounded-lg shadow-md p-6 animate-pulse">
+                  <div className="flex items-center mb-4">
+                    <div className="w-8 h-8 bg-gray-200 rounded mr-3"></div>
+                    <div className="bg-gray-200 h-6 w-32 rounded"></div>
+                  </div>
+                  <div className="bg-gray-200 h-4 w-full rounded mb-4"></div>
+                  <div className="flex justify-between items-center">
+                    <div className="bg-gray-200 h-4 w-20 rounded"></div>
+                    <div className="bg-gray-200 h-4 w-16 rounded"></div>
+                  </div>
                 </div>
-                <p className="text-gray-600 mb-4">{service.description}</p>
-                <div className="flex justify-between items-center">
-                  <span className="text-purple-600 font-semibold">{service.price}</span>
-                  <span className="text-gray-500">{service.duration}</span>
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              {previewServices.map((service) => (
+                <div key={service._id} className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
+                  <div className="flex items-center mb-4">
+                    {getServiceIcon(service.category)}
+                    <h3 className="text-xl font-semibold ml-3">{service.name}</h3>
+                  </div>
+                  <p className="text-gray-600 mb-4">{service.description}</p>
+                  <div className="flex justify-between items-center">
+                    <span className="text-purple-600 font-semibold">{formatPrice(service.price)}</span>
+                    <span className="text-gray-500">{formatDuration(service.duration)}</span>
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
           
           <div className="text-center mt-12">
             <a
